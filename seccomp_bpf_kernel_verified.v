@@ -629,6 +629,20 @@ Opaque action_of_code.
 Opaque run_bpf.
 Opaque run_filters.
 
+Theorem action_priority_transitive :
+  forall a1 a2 a3,
+  action_more_restrictive a1 a2 = true ->
+  action_more_restrictive a2 a3 = true ->
+  action_more_restrictive a1 a3 = true.
+Proof.
+  intros a1 a2 a3 H12 H23.
+  unfold action_more_restrictive in *.
+  apply Nat.ltb_lt in H12.
+  apply Nat.ltb_lt in H23.
+  apply Nat.ltb_lt.
+  lia.
+Qed.
+
 Definition compilation_success : bool := true.
 Check compilation_success.
 Compute compilation_success.
