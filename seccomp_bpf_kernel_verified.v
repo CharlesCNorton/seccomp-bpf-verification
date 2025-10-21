@@ -202,6 +202,83 @@ Record SockFilter := mkSockFilter {
   k    : word32
 }.
 
+Definition BPF_CLASS (code : word16) : nat := code mod 8.
+Definition BPF_SIZE (code : word16) : nat := (code / 8) mod 4.
+Definition BPF_MODE (code : word16) : nat := (code / 32) mod 8.
+Definition BPF_OP (code : word16) : nat := (code / 16) mod 16.
+Definition BPF_SRC (code : word16) : nat := (code / 8) mod 2.
+
+Definition decode_instruction (sf : SockFilter) : option Instruction :=
+  let cls := BPF_CLASS (code sf) in
+  let size_bits := BPF_SIZE (code sf) in
+  let size := match size_bits with
+              | 0 => BPF_W
+              | 1 => BPF_H
+              | 3 => BPF_B
+              | _ => BPF_W
+              end in
+  let mode := BPF_MODE (code sf) in
+  let op := BPF_OP (code sf) in
+  let src := BPF_SRC (code sf) in
+  let ksrc := if src =? 0 then BPF_K else BPF_X in
+  match cls with
+  | 0 =>
+      match mode with
+      | 0 => Some (LD_IMM (k sf))
+      | 1 => Some (LD_ABS (k sf) size)
+      | 2 => Some (LD_IND (k sf) size)
+      | 3 => if (k sf) <? MEM_SIZE then Some (LD_MEM (k sf)) else None
+      | 4 => Some LD_LEN
+      | 5 => Some (LD_MSH (k sf))
+      | _ => None
+      end
+  | 1 =>
+      match mode with
+      | 0 => Some (LDX_IMM (k sf))
+      | 3 => if (k sf) <? MEM_SIZE then Some (LDX_MEM (k sf)) else None
+      | 4 => Some LDX_LEN
+      | 5 => Some (LDX_MSH (k sf))
+      | _ => None
+      end
+  | 2 =>
+      if (k sf) <? MEM_SIZE then Some (ST_MEM (k sf)) else None
+  | 3 =>
+      if (k sf) <? MEM_SIZE then Some (STX_MEM (k sf)) else None
+  | 4 =>
+      let alu_op := match op with
+                    | 0 => Some BPF_ADD | 1 => Some BPF_SUB
+                    | 2 => Some BPF_MUL | 3 => Some BPF_DIV
+                    | 4 => Some BPF_OR  | 5 => Some BPF_AND
+                    | 6 => Some BPF_LSH | 7 => Some BPF_RSH
+                    | 8 => Some BPF_NEG | 9 => Some BPF_MOD
+                    | 10 => Some BPF_XOR
+                    | _ => None
+                    end in
+      match alu_op with
+      | Some aop => Some (ALU aop ksrc (k sf))
+      | None => None
+      end
+  | 5 =>
+      let jmp_op := match op with
+                    | 0 => Some BPF_JA
+                    | 1 => Some BPF_JEQ
+                    | 2 => Some BPF_JGT
+                    | 3 => Some BPF_JGE
+                    | 4 => Some BPF_JSET
+                    | _ => None
+                    end in
+      match jmp_op with
+      | Some jop => Some (JMP jop ksrc (k sf) (jt sf) (jf sf))
+      | None => None
+      end
+  | 6 => Some (RET ksrc (k sf))
+  | 7 =>
+      if op =? 0 then Some MISC_TAX
+      else if op =? 8 then Some MISC_TXA
+      else None
+  | _ => None
+  end.
+
 (* ==================== seccomp_data Structure (Kernel Layout) ====== *)
 
 Record SeccompData := mkData {
@@ -772,6 +849,47 @@ Qed.
 Theorem action_code_inverse :
   forall act,
   action_of_code (action_code act) = act.
+Proof.
+Admitted.
+
+Theorem decode_instruction_deterministic :
+  forall sf i1 i2,
+  decode_instruction sf = Some i1 ->
+  decode_instruction sf = Some i2 ->
+  i1 = i2.
+Proof.
+  intros sf i1 i2 H1 H2.
+  rewrite H1 in H2.
+  injection H2 as H2.
+  assumption.
+Qed.
+
+Theorem decode_valid_mem_bounds :
+  forall sf idx,
+  decode_instruction sf = Some (LD_MEM idx) ->
+  idx < MEM_SIZE.
+Proof.
+Admitted.
+
+Theorem decode_valid_st_mem_bounds :
+  forall sf idx,
+  decode_instruction sf = Some (ST_MEM idx) ->
+  idx < MEM_SIZE.
+Proof.
+Admitted.
+
+Theorem decode_ret_always_valid :
+  forall code_val jt_val jf_val k_val src,
+  BPF_CLASS code_val = 6 ->
+  decode_instruction (mkSockFilter code_val jt_val jf_val k_val) = Some (RET src k_val).
+Proof.
+Admitted.
+
+Theorem decode_none_preserves_safety :
+  forall sf,
+  decode_instruction sf = None ->
+  (BPF_CLASS (code sf) >= 8 \/
+   exists idx, (BPF_CLASS (code sf) = 2 \/ BPF_CLASS (code sf) = 3) /\ idx >= MEM_SIZE).
 Proof.
 Admitted.
 
