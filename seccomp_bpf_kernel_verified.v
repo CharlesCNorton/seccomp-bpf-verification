@@ -368,7 +368,7 @@ Definition apply_alu_op (op : BPFALUOp) (a : word32) (b : word32) : word32 :=
     | BPF_AND => Nat.land a b
     | BPF_LSH => Nat.shiftl a b
     | BPF_RSH => Nat.shiftr a b
-    | BPF_NEG => 0
+    | BPF_NEG => if a =? 0 then 0 else 4294967296 - a
     | BPF_MOD => if b =? 0 then a else a mod b
     | BPF_XOR => Nat.lxor a b
     end
