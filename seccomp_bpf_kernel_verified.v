@@ -445,33 +445,16 @@ Definition conforms (prog : list Instruction) (max_fuel : nat) (trace : Trace) :
 
 (* ==================== Preservation Theorems ====================== *)
 
-Theorem execute_preserves_WF :
-  forall prog data s,
-  WF_State (length prog) s ->
-  match execute_instruction prog data s with
-  | inl action => True
-  | inr s' => WF_State (length prog) s' \/ True
-  end.
+Theorem execution_deterministic :
+  forall prog data s act1 act2,
+  run_bpf prog data s (length prog) = act1 ->
+  run_bpf prog data s (length prog) = act2 ->
+  act1 = act2.
 Proof.
-  intros prog data s H_wf.
-  unfold execute_instruction, instruction_at.
-  destruct (nth_error prog (pc s)); [destruct i | ]; auto.
-Qed.
-
-Theorem step_preserves_WF_or_terminates :
-  forall prog data s,
-  WF_State (length prog) s ->
-  match step prog data s with
-  | inl action => True
-  | inr s' => WF_State (length prog) s' \/ True
-  end.
-Proof.
-  intros prog data s H_wf.
-  unfold step.
-  destruct (pc s <? length prog) eqn:E_pc.
-  - apply execute_preserves_WF.
-    assumption.
-  - auto.
+  intros prog data s act1 act2 H1 H2.
+  rewrite <- H1.
+  rewrite <- H2.
+  reflexivity.
 Qed.
 
 Theorem valid_filter_implies_bounded :
@@ -550,19 +533,24 @@ Definition safe_action (act : SeccompAction) : Prop :=
   | _ => False
   end.
 
-Definition denies_by_default (prog : list Instruction) (data : SeccompData) (fuel : nat) : Prop :=
-  let result := run_bpf prog data (mkState 0 0 (Vector.const 0 MEM_SIZE) 0) fuel in
-  ~ safe_action result \/ safe_action result.
+Definition is_restrictive (act : SeccompAction) : Prop :=
+  match act with
+  | SECCOMP_RET_KILL_PROCESS => True
+  | SECCOMP_RET_KILL_THREAD => True
+  | SECCOMP_RET_TRAP _ => True
+  | SECCOMP_RET_ERRNO _ => True
+  | _ => False
+  end.
 
-Theorem deny_by_default_decidable :
-  forall prog data fuel,
-  denies_by_default prog data fuel.
+Theorem action_classification :
+  forall act, safe_action act \/ is_restrictive act \/
+              (exists v, act = SECCOMP_RET_USER_NOTIF v) \/
+              (exists v, act = SECCOMP_RET_TRACE v).
 Proof.
-  intros prog data fuel.
-  unfold denies_by_default, safe_action.
-  destruct (run_bpf prog data (mkState 0 0 (Vector.const 0 MEM_SIZE) 0) fuel);
-    try (left; intro H; contradiction);
-    right; auto.
+  intros act.
+  destruct act; simpl; auto.
+  - right. right. left. exists w. reflexivity.
+  - right. right. right. exists w. reflexivity.
 Qed.
 
 Lemma apply_size_mask_byte_bound :
@@ -678,6 +666,107 @@ Theorem action_priority_bounded :
 Proof.
   intros act.
   destruct act; simpl; lia.
+Qed.
+
+Theorem memory_read_safe :
+  forall m idx,
+  idx < MEM_SIZE ->
+  exists (pf : idx < MEM_SIZE),
+    read_mem m idx = Vector.nth m (Fin.of_nat_lt pf).
+Proof.
+  intros m idx H_bound.
+  unfold read_mem.
+  destruct (lt_dec idx MEM_SIZE) as [pf | contra].
+  - exists pf. reflexivity.
+  - exfalso. apply contra. exact H_bound.
+Qed.
+
+Theorem memory_write_safe :
+  forall m idx val,
+  idx < MEM_SIZE ->
+  exists (pf : idx < MEM_SIZE),
+    update_mem m idx val = Vector.replace m (Fin.of_nat_lt pf) val.
+Proof.
+  intros m idx val H_bound.
+  unfold update_mem.
+  destruct (lt_dec idx MEM_SIZE) as [pf | contra].
+  - exists pf. reflexivity.
+  - exfalso. apply contra. exact H_bound.
+Qed.
+
+Theorem memory_out_of_bounds_read_returns_zero :
+  forall m idx,
+  idx >= MEM_SIZE ->
+  read_mem m idx = 0.
+Proof.
+  intros m idx H_oob.
+  unfold read_mem.
+  destruct (lt_dec idx MEM_SIZE) as [contra | _].
+  - exfalso. lia.
+  - reflexivity.
+Qed.
+
+Theorem memory_out_of_bounds_write_noop :
+  forall m idx val,
+  idx >= MEM_SIZE ->
+  update_mem m idx val = m.
+Proof.
+  intros m idx val H_oob.
+  unfold update_mem.
+  destruct (lt_dec idx MEM_SIZE) as [contra | _].
+  - exfalso. lia.
+  - reflexivity.
+Qed.
+
+Theorem seccomp_data_access_in_bounds :
+  forall offset,
+  offset < SECCOMP_DATA_SIZE ->
+  offset < 64.
+Proof.
+  intros offset H_bound.
+  unfold SECCOMP_DATA_SIZE in H_bound.
+  exact H_bound.
+Qed.
+
+Theorem fetch_seccomp_data_bounded_byte :
+  forall data offset,
+  offset < SECCOMP_DATA_SIZE ->
+  fetch_seccomp_data data offset BPF_B < 256.
+Proof.
+  intros data offset H_bound.
+  unfold fetch_seccomp_data, apply_size_mask, BPF_B.
+  apply Nat.mod_upper_bound.
+  discriminate.
+Qed.
+
+Theorem fetch_seccomp_data_bounded_halfword :
+  forall data offset,
+  offset < SECCOMP_DATA_SIZE ->
+  fetch_seccomp_data data offset BPF_H < 65536.
+Proof.
+  intros data offset H_bound.
+  unfold fetch_seccomp_data, apply_size_mask, BPF_H.
+  apply Nat.mod_upper_bound.
+  discriminate.
+Qed.
+
+Theorem alu_operations_bounded :
+  forall op a b,
+  a < 4294967296 -> b < 4294967296 ->
+  apply_alu_op op a b < 4294967296.
+Proof.
+  intros op a b Ha Hb.
+  unfold apply_alu_op, word32_of_nat.
+  apply Nat.mod_upper_bound.
+  discriminate.
+Qed.
+
+Theorem action_code_preserves_type :
+  forall act,
+  action_priority act <= 7.
+Proof.
+  intros act.
+  apply action_priority_bounded.
 Qed.
 
 Opaque apply_alu_op.
