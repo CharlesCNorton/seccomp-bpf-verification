@@ -902,6 +902,14 @@ Definition security_properties_complete : bool := true.
 Check security_properties_complete.
 Compute security_properties_complete.
 
+Lemma word32_of_nat_small : forall n, n < 4294967296 -> word32_of_nat n = n.
+Proof.
+  intros n H.
+  unfold word32_of_nat.
+  rewrite Nat.mod_small; try assumption.
+  reflexivity.
+Qed.
+
 Definition action_code_inverse_proofs_complete : bool := true.
 Check action_code_inverse_proofs_complete.
 Compute action_code_inverse_proofs_complete.
