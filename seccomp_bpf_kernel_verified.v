@@ -623,12 +623,6 @@ Proof.
   reflexivity.
 Qed.
 
-Opaque apply_alu_op.
-Opaque fetch_seccomp_data.
-Opaque action_of_code.
-Opaque run_bpf.
-Opaque run_filters.
-
 Theorem action_priority_transitive :
   forall a1 a2 a3,
   action_more_restrictive a1 a2 = true ->
@@ -642,6 +636,55 @@ Proof.
   apply Nat.ltb_lt.
   lia.
 Qed.
+
+Theorem kill_process_most_restrictive :
+  forall act,
+  act <> SECCOMP_RET_KILL_PROCESS ->
+  action_more_restrictive SECCOMP_RET_KILL_PROCESS act = true.
+Proof.
+  intros act H_neq.
+  unfold action_more_restrictive.
+  destruct act; simpl; try reflexivity.
+  exfalso. apply H_neq. reflexivity.
+Qed.
+
+Theorem allow_least_restrictive :
+  forall act,
+  act <> SECCOMP_RET_ALLOW ->
+  action_more_restrictive act SECCOMP_RET_ALLOW = true.
+Proof.
+  intros act H_neq.
+  unfold action_more_restrictive.
+  destruct act; simpl; try reflexivity.
+  exfalso. apply H_neq. reflexivity.
+Qed.
+
+Theorem kill_process_priority_zero :
+  action_priority SECCOMP_RET_KILL_PROCESS = 0.
+Proof.
+  unfold action_priority.
+  reflexivity.
+Qed.
+
+Theorem allow_priority_max :
+  action_priority SECCOMP_RET_ALLOW = 7.
+Proof.
+  unfold action_priority.
+  reflexivity.
+Qed.
+
+Theorem action_priority_bounded :
+  forall act, action_priority act <= 7.
+Proof.
+  intros act.
+  destruct act; simpl; lia.
+Qed.
+
+Opaque apply_alu_op.
+Opaque fetch_seccomp_data.
+Opaque action_of_code.
+Opaque run_bpf.
+Opaque run_filters.
 
 Definition compilation_success : bool := true.
 Check compilation_success.

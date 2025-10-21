@@ -1,4 +1,4 @@
-DIGEST cc7661dcee37c2a5e3375bfe8268b281
+DIGEST a14780d92e252f77ab45b0c5cf85c7dd
 Fseccomp_bpf_kernel_verified
 R544:557 Coq.Lists.List <> <> lib
 R575:589 Coq.Arith.Arith <> <> lib
@@ -1486,41 +1486,80 @@ R20021:20024 seccomp_bpf_kernel_verified <> fuel:174 var
 R20028:20033 seccomp_bpf_kernel_verified <> action:175 var
 R20081:20091 seccomp_bpf_kernel_verified <> run_filters def
 R20081:20091 seccomp_bpf_kernel_verified <> run_filters def
-R20141:20152 seccomp_bpf_kernel_verified <> apply_alu_op def
-R20162:20179 seccomp_bpf_kernel_verified <> fetch_seccomp_data def
-R20189:20202 seccomp_bpf_kernel_verified <> action_of_code def
-R20212:20218 seccomp_bpf_kernel_verified <> run_bpf def
-R20228:20238 seccomp_bpf_kernel_verified <> run_filters def
-prf 20250:20275 <> action_priority_transitive
-binder 20288:20289 <> a1:176
-binder 20291:20292 <> a2:177
-binder 20294:20295 <> a3:178
-R20336:20341 Coq.Init.Logic <> ::type_scope:x_'->'_x not
-R20329:20331 Coq.Init.Logic <> ::type_scope:x_'='_x not
-R20300:20322 seccomp_bpf_kernel_verified <> action_more_restrictive def
-R20324:20325 seccomp_bpf_kernel_verified <> a1:176 var
-R20327:20328 seccomp_bpf_kernel_verified <> a2:177 var
-R20332:20335 Coq.Init.Datatypes <> true constr
-R20378:20383 Coq.Init.Logic <> ::type_scope:x_'->'_x not
-R20371:20373 Coq.Init.Logic <> ::type_scope:x_'='_x not
-R20342:20364 seccomp_bpf_kernel_verified <> action_more_restrictive def
-R20366:20367 seccomp_bpf_kernel_verified <> a2:177 var
-R20369:20370 seccomp_bpf_kernel_verified <> a3:178 var
-R20374:20377 Coq.Init.Datatypes <> true constr
-R20413:20415 Coq.Init.Logic <> ::type_scope:x_'='_x not
-R20384:20406 seccomp_bpf_kernel_verified <> action_more_restrictive def
-R20408:20409 seccomp_bpf_kernel_verified <> a1:176 var
-R20411:20412 seccomp_bpf_kernel_verified <> a3:178 var
-R20416:20419 Coq.Init.Datatypes <> true constr
-R20465:20487 seccomp_bpf_kernel_verified <> action_more_restrictive def
-R20503:20512 Coq.Arith.PeanoNat Nat ltb_lt thm
-R20503:20512 Coq.Arith.PeanoNat Nat ltb_lt thm
-R20530:20539 Coq.Arith.PeanoNat Nat ltb_lt thm
-R20530:20539 Coq.Arith.PeanoNat Nat ltb_lt thm
-R20557:20566 Coq.Arith.PeanoNat Nat ltb_lt thm
-R20557:20566 Coq.Arith.PeanoNat Nat ltb_lt thm
-def 20593:20611 <> compilation_success
-R20615:20618 Coq.Init.Datatypes <> bool ind
-R20623:20626 Coq.Init.Datatypes <> true constr
-R20635:20653 seccomp_bpf_kernel_verified <> compilation_success def
-R20664:20682 seccomp_bpf_kernel_verified <> compilation_success def
+prf 20142:20167 <> action_priority_transitive
+binder 20180:20181 <> a1:176
+binder 20183:20184 <> a2:177
+binder 20186:20187 <> a3:178
+R20228:20233 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R20221:20223 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R20192:20214 seccomp_bpf_kernel_verified <> action_more_restrictive def
+R20216:20217 seccomp_bpf_kernel_verified <> a1:176 var
+R20219:20220 seccomp_bpf_kernel_verified <> a2:177 var
+R20224:20227 Coq.Init.Datatypes <> true constr
+R20270:20275 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R20263:20265 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R20234:20256 seccomp_bpf_kernel_verified <> action_more_restrictive def
+R20258:20259 seccomp_bpf_kernel_verified <> a2:177 var
+R20261:20262 seccomp_bpf_kernel_verified <> a3:178 var
+R20266:20269 Coq.Init.Datatypes <> true constr
+R20305:20307 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R20276:20298 seccomp_bpf_kernel_verified <> action_more_restrictive def
+R20300:20301 seccomp_bpf_kernel_verified <> a1:176 var
+R20303:20304 seccomp_bpf_kernel_verified <> a3:178 var
+R20308:20311 Coq.Init.Datatypes <> true constr
+R20357:20379 seccomp_bpf_kernel_verified <> action_more_restrictive def
+R20395:20404 Coq.Arith.PeanoNat Nat ltb_lt thm
+R20395:20404 Coq.Arith.PeanoNat Nat ltb_lt thm
+R20422:20431 Coq.Arith.PeanoNat Nat ltb_lt thm
+R20422:20431 Coq.Arith.PeanoNat Nat ltb_lt thm
+R20449:20458 Coq.Arith.PeanoNat Nat ltb_lt thm
+R20449:20458 Coq.Arith.PeanoNat Nat ltb_lt thm
+prf 20482:20510 <> kill_process_most_restrictive
+binder 20523:20525 <> act:179
+R20561:20566 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R20533:20536 Coq.Init.Logic <> ::type_scope:x_'<>'_x not
+R20530:20532 seccomp_bpf_kernel_verified <> act:179 var
+R20537:20560 seccomp_bpf_kernel_verified <> SECCOMP_RET_KILL_PROCESS constr
+R20619:20621 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R20567:20589 seccomp_bpf_kernel_verified <> action_more_restrictive def
+R20591:20614 seccomp_bpf_kernel_verified <> SECCOMP_RET_KILL_PROCESS constr
+R20616:20618 seccomp_bpf_kernel_verified <> act:179 var
+R20622:20625 Coq.Init.Datatypes <> true constr
+R20664:20686 seccomp_bpf_kernel_verified <> action_more_restrictive def
+prf 20780:20802 <> allow_least_restrictive
+binder 20815:20817 <> act:180
+R20846:20851 Coq.Init.Logic <> ::type_scope:x_'->'_x not
+R20825:20828 Coq.Init.Logic <> ::type_scope:x_'<>'_x not
+R20822:20824 seccomp_bpf_kernel_verified <> act:180 var
+R20829:20845 seccomp_bpf_kernel_verified <> SECCOMP_RET_ALLOW constr
+R20897:20899 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R20852:20874 seccomp_bpf_kernel_verified <> action_more_restrictive def
+R20876:20878 seccomp_bpf_kernel_verified <> act:180 var
+R20880:20896 seccomp_bpf_kernel_verified <> SECCOMP_RET_ALLOW constr
+R20900:20903 Coq.Init.Datatypes <> true constr
+R20942:20964 seccomp_bpf_kernel_verified <> action_more_restrictive def
+prf 21058:21083 <> kill_process_priority_zero
+R21129:21131 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R21089:21103 seccomp_bpf_kernel_verified <> action_priority def
+R21105:21128 seccomp_bpf_kernel_verified <> SECCOMP_RET_KILL_PROCESS constr
+R21151:21165 seccomp_bpf_kernel_verified <> action_priority def
+prf 21197:21214 <> allow_priority_max
+R21253:21255 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R21220:21234 seccomp_bpf_kernel_verified <> action_priority def
+R21236:21252 seccomp_bpf_kernel_verified <> SECCOMP_RET_ALLOW constr
+R21275:21289 seccomp_bpf_kernel_verified <> action_priority def
+prf 21321:21343 <> action_priority_bounded
+binder 21356:21358 <> act:181
+R21380:21383 Coq.Init.Peano <> ::nat_scope:x_'<='_x not
+R21361:21375 seccomp_bpf_kernel_verified <> action_priority def
+R21377:21379 seccomp_bpf_kernel_verified <> act:181 var
+R21449:21460 seccomp_bpf_kernel_verified <> apply_alu_op def
+R21470:21487 seccomp_bpf_kernel_verified <> fetch_seccomp_data def
+R21497:21510 seccomp_bpf_kernel_verified <> action_of_code def
+R21520:21526 seccomp_bpf_kernel_verified <> run_bpf def
+R21536:21546 seccomp_bpf_kernel_verified <> run_filters def
+def 21561:21579 <> compilation_success
+R21583:21586 Coq.Init.Datatypes <> bool ind
+R21591:21594 Coq.Init.Datatypes <> true constr
+R21603:21621 seccomp_bpf_kernel_verified <> compilation_success def
+R21632:21650 seccomp_bpf_kernel_verified <> compilation_success def
