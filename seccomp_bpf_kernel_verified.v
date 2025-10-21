@@ -361,7 +361,7 @@ Definition apply_alu_op (op : BPFALUOp) (a : word32) (b : word32) : word32 :=
   word32_of_nat (
     match op with
     | BPF_ADD => a + b
-    | BPF_SUB => if a <? b then 0 else a - b
+    | BPF_SUB => if a <? b then 4294967296 + a - b else a - b
     | BPF_MUL => a * b
     | BPF_DIV => if b =? 0 then 0 else a / b
     | BPF_OR  => Nat.lor a b
