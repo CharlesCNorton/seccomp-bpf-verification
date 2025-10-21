@@ -1,4 +1,4 @@
-DIGEST e9b5be35229a35c30a94662eebc4edc0
+DIGEST 40919cf7ecbee2c5be4b4a29e352e146
 Fseccomp_bpf_kernel_verified
 R544:557 Coq.Lists.List <> <> lib
 R575:589 Coq.Arith.Arith <> <> lib
@@ -1680,13 +1680,20 @@ R23295:23309 seccomp_bpf_kernel_verified <> action_priority def
 R23311:23313 seccomp_bpf_kernel_verified <> act:199 var
 R23350:23372 seccomp_bpf_kernel_verified <> action_priority_bounded thm
 R23350:23372 seccomp_bpf_kernel_verified <> action_priority_bounded thm
-R23388:23399 seccomp_bpf_kernel_verified <> apply_alu_op def
-R23409:23426 seccomp_bpf_kernel_verified <> fetch_seccomp_data def
-R23436:23449 seccomp_bpf_kernel_verified <> action_of_code def
-R23459:23465 seccomp_bpf_kernel_verified <> run_bpf def
-R23475:23485 seccomp_bpf_kernel_verified <> run_filters def
-def 23500:23518 <> compilation_success
-R23522:23525 Coq.Init.Datatypes <> bool ind
-R23530:23533 Coq.Init.Datatypes <> true constr
-R23542:23560 seccomp_bpf_kernel_verified <> compilation_success def
-R23571:23589 seccomp_bpf_kernel_verified <> compilation_success def
+prf 23389:23407 <> action_code_inverse
+binder 23420:23422 <> act:200
+R23459:23461 Coq.Init.Logic <> ::type_scope:x_'='_x not
+R23427:23440 seccomp_bpf_kernel_verified <> action_of_code def
+R23443:23453 seccomp_bpf_kernel_verified <> action_code def
+R23455:23457 seccomp_bpf_kernel_verified <> act:200 var
+R23462:23464 seccomp_bpf_kernel_verified <> act:200 var
+R23492:23503 seccomp_bpf_kernel_verified <> apply_alu_op def
+R23513:23530 seccomp_bpf_kernel_verified <> fetch_seccomp_data def
+R23540:23553 seccomp_bpf_kernel_verified <> action_of_code def
+R23563:23569 seccomp_bpf_kernel_verified <> run_bpf def
+R23579:23589 seccomp_bpf_kernel_verified <> run_filters def
+def 23604:23622 <> compilation_success
+R23626:23629 Coq.Init.Datatypes <> bool ind
+R23634:23637 Coq.Init.Datatypes <> true constr
+R23646:23664 seccomp_bpf_kernel_verified <> compilation_success def
+R23675:23693 seccomp_bpf_kernel_verified <> compilation_success def

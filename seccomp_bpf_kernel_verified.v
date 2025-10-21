@@ -769,6 +769,12 @@ Proof.
   apply action_priority_bounded.
 Qed.
 
+Theorem action_code_inverse :
+  forall act,
+  action_of_code (action_code act) = act.
+Proof.
+Admitted.
+
 Opaque apply_alu_op.
 Opaque fetch_seccomp_data.
 Opaque action_of_code.
