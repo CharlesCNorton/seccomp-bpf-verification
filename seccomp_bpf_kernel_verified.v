@@ -1040,6 +1040,20 @@ Proof.
   discriminate.
 Qed.
 
+Lemma msh_result_bounded :
+  forall data offset,
+  offset < SECCOMP_DATA_SIZE ->
+  let byte_val := fetch_seccomp_data data offset BPF_B in
+  let lower_nibble := byte_val mod 16 in
+  let header_len := lower_nibble * 4 in
+  header_len < 64.
+Proof.
+  intros data offset H_offset byte_val lower_nibble header_len.
+  assert (H_mod: lower_nibble < 16).
+  { subst lower_nibble. apply Nat.mod_upper_bound. discriminate. }
+  subst header_len. lia.
+Qed.
+
 Theorem alu_operations_bounded :
   forall op a b,
   a < 4294967296 -> b < 4294967296 ->
