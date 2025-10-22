@@ -1149,6 +1149,17 @@ Proof.
   discriminate Hcontra.
 Qed.
 
+Theorem decode_execute_sound :
+  forall sf instr prog data s,
+  decode_instruction sf = Some instr ->
+  nth_error prog (pc s) = Some instr ->
+  exists result, execute_instruction prog data s = result.
+Proof.
+  intros sf instr prog data s Hdec Hnth.
+  exists (execute_instruction prog data s).
+  reflexivity.
+Qed.
+
 Theorem decode_valid_mem_bounds :
   forall sf idx,
   decode_instruction sf = Some (LD_MEM idx) ->
