@@ -1289,12 +1289,6 @@ Definition decoder_verification_complete : bool := true.
 Check decoder_verification_complete.
 Compute decoder_verification_complete.
 
-Opaque apply_alu_op.
-Opaque fetch_seccomp_data.
-Opaque action_of_code.
-Opaque run_bpf.
-Opaque run_filters.
-
 Definition compilation_success : bool := true.
 Check compilation_success.
 Compute compilation_success.
