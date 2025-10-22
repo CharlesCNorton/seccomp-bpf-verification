@@ -55,9 +55,17 @@ Proof.
   discriminate.
 Qed.
 
-Definition basic_word_types_complete : bool := true.
-Check basic_word_types_complete.
-Compute basic_word_types_complete.
+Theorem basic_word_types_complete :
+  (forall n, word32_of_nat n < 4294967296) /\
+  (forall n, word16_of_nat n < 65536) /\
+  (forall n, byte_of_nat n < 256).
+Proof.
+  split.
+  - apply word32_bound.
+  - split.
+    + apply word16_bound.
+    + apply byte_bound.
+Qed.
 
 (* ==================== Kernel Constants ========================== *)
 
