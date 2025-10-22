@@ -420,7 +420,8 @@ Definition execute_instruction (prog : list Instruction) (data : SeccompData) (s
       | LD_MSH k =>
           let byte_val := fetch_seccomp_data data k 1 in
           let lower_nibble := byte_val mod 16 in
-          inr (mkState lower_nibble (reg_X s) (mem s) (S (pc s)))
+          let header_len := lower_nibble * 4 in
+          inr (mkState header_len (reg_X s) (mem s) (S (pc s)))
       | LDX_IMM k =>
           inr (mkState (reg_A s) k (mem s) (S (pc s)))
       | LDX_MEM k =>
@@ -430,7 +431,8 @@ Definition execute_instruction (prog : list Instruction) (data : SeccompData) (s
       | LDX_MSH k =>
           let byte_val := fetch_seccomp_data data k 1 in
           let lower_nibble := byte_val mod 16 in
-          inr (mkState (reg_A s) lower_nibble (mem s) (S (pc s)))
+          let header_len := lower_nibble * 4 in
+          inr (mkState (reg_A s) header_len (mem s) (S (pc s)))
       | ST_MEM k =>
           inr (mkState (reg_A s) (reg_X s) (update_mem (mem s) k (reg_A s)) (S (pc s)))
       | STX_MEM k =>
