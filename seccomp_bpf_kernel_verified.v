@@ -120,8 +120,7 @@ Definition action_of_code (code : word32) : SeccompAction :=
   let high := code / 65536 in
   let low  := code mod 65536 in
   if high =? 32768 then SECCOMP_RET_KILL_PROCESS
-  else if high =? 0 then
-    if code =? 0 then SECCOMP_RET_KILL_THREAD else SECCOMP_RET_ERRNO low
+  else if high =? 0 then SECCOMP_RET_KILL_THREAD
   else if high =? 3 then SECCOMP_RET_TRAP low
   else if high =? 5 then SECCOMP_RET_ERRNO low
   else if high =? 32704 then SECCOMP_RET_USER_NOTIF low
@@ -490,14 +489,15 @@ Definition WF_State (prog_len : nat) (s : BPFState) : Prop :=
 Definition valid_program_length (prog : list Instruction) : Prop :=
   length prog <= BPF_MAXINSNS.
 
-Fixpoint has_return (prog : list Instruction) : bool :=
+Fixpoint last_instruction_is_ret (prog : list Instruction) : bool :=
   match prog with
   | List.nil => false
-  | List.cons instr rest =>
+  | List.cons instr List.nil =>
       match instr with
       | RET _ _ => true
-      | _ => has_return rest
+      | _ => false
       end
+  | List.cons _ rest => last_instruction_is_ret rest
   end.
 
 Definition no_invalid_jumps (prog : list Instruction) : Prop :=
@@ -505,10 +505,16 @@ Definition no_invalid_jumps (prog : list Instruction) : Prop :=
     nth_error prog idx = Some (JMP op src k jt jf) ->
     S idx + jt < length prog /\ S idx + jf < length prog.
 
+Definition no_backward_jumps (prog : list Instruction) : Prop :=
+  forall idx op src k jt jf,
+    nth_error prog idx = Some (JMP op src k jt jf) ->
+    S idx + jt > idx /\ S idx + jf > idx.
+
 Definition valid_filter (prog : list Instruction) : Prop :=
   valid_program_length prog /\
-  has_return prog = true /\
-  no_invalid_jumps prog.
+  last_instruction_is_ret prog = true /\
+  no_invalid_jumps prog /\
+  no_backward_jumps prog.
 
 (* ==================== Single Step Function ======================= *)
 
