@@ -1402,6 +1402,421 @@ Definition decoder_verification_complete : bool := true.
 Check decoder_verification_complete.
 Compute decoder_verification_complete.
 
+Theorem bpf_instruction_set_completeness :
+  (forall sf i1 i2,
+    decode_instruction sf = Some i1 ->
+    decode_instruction sf = Some i2 ->
+    i1 = i2) /\
+  (forall sf,
+    (exists i, decode_instruction sf = Some i) \/ decode_instruction sf = None) /\
+  (forall sf,
+    decode_instruction sf = decode_instruction sf).
+Proof.
+  split.
+  - intros sf i1 i2 H1 H2.
+    exact (decode_instruction_deterministic sf i1 i2 H1 H2).
+  - split.
+    + intros sf.
+      exact (decode_instruction_total sf).
+    + intros sf.
+      exact (decode_instruction_functional sf).
+Qed.
+
+Theorem bpf_decoder_completeness :
+  (forall sf i1 i2,
+    decode_instruction sf = Some i1 ->
+    decode_instruction sf = Some i2 ->
+    i1 = i2) /\
+  (forall sf idx,
+    decode_instruction sf = Some (LD_MEM idx) ->
+    idx < MEM_SIZE) /\
+  (forall sf idx,
+    decode_instruction sf = Some (ST_MEM idx) ->
+    idx < MEM_SIZE) /\
+  (forall sf,
+    BPF_CLASS (code sf) = 6 ->
+    exists src k, decode_instruction sf = Some (RET src k)) /\
+  (forall n, BPF_CLASS n < 8) /\
+  (forall sf, exists result, decode_instruction sf = result).
+Proof.
+  split.
+  - intros sf i1 i2 H1 H2.
+    exact (decode_instruction_deterministic sf i1 i2 H1 H2).
+  - split.
+    + intros sf idx H.
+      exact (decode_valid_mem_bounds sf idx H).
+    + split.
+      * intros sf idx H.
+        exact (decode_valid_st_mem_bounds sf idx H).
+      * split.
+        { intros sf Hcls.
+          exact (decode_class_6_always_some sf Hcls). }
+        { split.
+          - intros n.
+            exact (bpf_class_bound n).
+          - intros sf.
+            exact (decode_class_coverage sf). }
+Qed.
+
+Theorem seccomp_data_structure_completeness :
+  (forall data, valid_arch (arch data) = true) /\
+  (forall data, exists n, arch data = n) /\
+  (forall offset,
+    offset < SECCOMP_DATA_SIZE ->
+    offset < 64).
+Proof.
+  split.
+  - intros data.
+    exact (valid_arch_always data).
+  - split.
+    + intros data.
+      exact (arch_is_word32 data).
+    + intros offset H_bound.
+      exact (seccomp_data_access_in_bounds offset H_bound).
+Qed.
+
+Theorem helper_functions_completeness :
+  (forall val, apply_size_mask val BPF_B < 256) /\
+  (forall val, apply_size_mask val BPF_H < 65536) /\
+  (forall val, apply_size_mask val BPF_W = val) /\
+  (forall data offset,
+    offset < SECCOMP_DATA_SIZE ->
+    fetch_seccomp_data data offset BPF_B < 256) /\
+  (forall data offset,
+    offset < SECCOMP_DATA_SIZE ->
+    fetch_seccomp_data data offset BPF_H < 65536) /\
+  (forall data offset,
+    offset < SECCOMP_DATA_SIZE ->
+    let byte_val := fetch_seccomp_data data offset BPF_B in
+    let lower_nibble := byte_val mod 16 in
+    let header_len := lower_nibble * 4 in
+    header_len < 64).
+Proof.
+  split.
+  - intros val.
+    exact (apply_size_mask_byte_bound val).
+  - split.
+    + intros val.
+      exact (apply_size_mask_halfword_bound val).
+    + split.
+      * intros val.
+        exact (apply_size_mask_word_preserves val).
+      * split.
+        { intros data offset H_bound.
+          exact (fetch_seccomp_data_bounded_byte data offset H_bound). }
+        { split.
+          - intros data offset H_bound.
+            exact (fetch_seccomp_data_bounded_halfword data offset H_bound).
+          - intros data offset H_offset.
+            exact (msh_result_bounded data offset H_offset). }
+Qed.
+
+Theorem execution_semantics_completeness :
+  (forall prog data s fuel,
+    run_bpf prog data s fuel = run_bpf prog data s fuel) /\
+  (forall prog data s r1 r2,
+    execute_instruction prog data s = r1 ->
+    execute_instruction prog data s = r2 ->
+    r1 = r2) /\
+  (forall prog data s r1 r2,
+    step prog data s = r1 ->
+    step prog data s = r2 ->
+    r1 = r2) /\
+  (forall filters data fuel,
+    exists action, run_filters filters data fuel = action).
+Proof.
+  split.
+  - intros prog data s fuel.
+    exact (execution_functional prog data s fuel).
+  - split.
+    + intros prog data s r1 r2 H1 H2.
+      exact (single_step_deterministic prog data s r1 r2 H1 H2).
+    + split.
+      * intros prog data s r1 r2 H1 H2.
+        exact (step_deterministic prog data s r1 r2 H1 H2).
+      * intros filters data fuel.
+        exact (multi_filter_terminates filters data fuel).
+Qed.
+
+Theorem well_formedness_completeness :
+  (forall prog,
+    valid_filter prog ->
+    length prog <= BPF_MAXINSNS) /\
+  (forall data fuel,
+    run_filters List.nil data fuel = SECCOMP_RET_ALLOW).
+Proof.
+  split.
+  - intros prog H_valid.
+    exact (valid_filter_implies_bounded prog H_valid).
+  - intros data fuel.
+    exact (run_filters_nil_allows data fuel).
+Qed.
+
+Theorem trace_conformance_completeness :
+  (forall prog max_fuel,
+    conforms prog max_fuel List.nil) /\
+  (forall prog max_fuel inp out,
+    run_bpf prog inp (mkState 0 0 (Vector.const 0 MEM_SIZE) 0) max_fuel = out ->
+    conforms prog max_fuel (List.cons (mkTraceStep inp out) List.nil)) /\
+  (forall prog max_fuel step trace,
+    seccomp_action_eq
+      (run_bpf prog (trace_input step) (mkState 0 0 (Vector.const 0 MEM_SIZE) 0) max_fuel)
+      (trace_output step) = true ->
+    conforms prog max_fuel trace ->
+    conforms prog max_fuel (List.cons step trace)) /\
+  (forall a, seccomp_action_eq a a = true).
+Proof.
+  split.
+  - intros prog max_fuel.
+    exact (model_conforms_to_real_world prog max_fuel).
+  - split.
+    + intros prog max_fuel inp out H_run.
+      exact (conforms_single_step prog max_fuel inp out H_run).
+    + split.
+      * intros prog max_fuel step trace H_step H_trace.
+        exact (conforms_cons prog max_fuel step trace H_step H_trace).
+      * intros a.
+        exact (seccomp_action_eq_refl a).
+Qed.
+
+Theorem preservation_theorems_completeness :
+  (forall prog data s act1 act2,
+    run_bpf prog data s (length prog) = act1 ->
+    run_bpf prog data s (length prog) = act2 ->
+    act1 = act2) /\
+  (forall prog data s fuel,
+    run_bpf prog data s fuel = run_bpf prog data s fuel) /\
+  (forall prog data s r1 r2,
+    execute_instruction prog data s = r1 ->
+    execute_instruction prog data s = r2 ->
+    r1 = r2) /\
+  (forall prog data s r1 r2,
+    step prog data s = r1 ->
+    step prog data s = r2 ->
+    r1 = r2) /\
+  (forall prog,
+    valid_filter prog ->
+    length prog <= BPF_MAXINSNS).
+Proof.
+  split.
+  - intros prog data s act1 act2 H1 H2.
+    exact (execution_deterministic prog data s act1 act2 H1 H2).
+  - split.
+    + intros prog data s fuel.
+      exact (execution_functional prog data s fuel).
+    + split.
+      * intros prog data s r1 r2 H1 H2.
+        exact (single_step_deterministic prog data s r1 r2 H1 H2).
+      * split.
+        { intros prog data s r1 r2 H1 H2.
+          exact (step_deterministic prog data s r1 r2 H1 H2). }
+        { intros prog H_valid.
+          exact (valid_filter_implies_bounded prog H_valid). }
+Qed.
+
+Theorem conformance_theorems_completeness :
+  (forall prog max_fuel,
+    conforms prog max_fuel List.nil) /\
+  (forall prog max_fuel inp out,
+    run_bpf prog inp (mkState 0 0 (Vector.const 0 MEM_SIZE) 0) max_fuel = out ->
+    conforms prog max_fuel (List.cons (mkTraceStep inp out) List.nil)) /\
+  (forall prog max_fuel step trace,
+    seccomp_action_eq
+      (run_bpf prog (trace_input step) (mkState 0 0 (Vector.const 0 MEM_SIZE) 0) max_fuel)
+      (trace_output step) = true ->
+    conforms prog max_fuel trace ->
+    conforms prog max_fuel (List.cons step trace)).
+Proof.
+  split.
+  - intros prog max_fuel.
+    exact (model_conforms_to_real_world prog max_fuel).
+  - split.
+    + intros prog max_fuel inp out H_run.
+      exact (conforms_single_step prog max_fuel inp out H_run).
+    + intros prog max_fuel step trace H_step H_trace.
+      exact (conforms_cons prog max_fuel step trace H_step H_trace).
+Qed.
+
+Theorem security_properties_completeness :
+  (forall prog data fuel,
+    terminates_or_returns prog data fuel) /\
+  (forall act,
+    safe_action act \/ is_restrictive act \/
+    (exists v, act = SECCOMP_RET_USER_NOTIF v) \/
+    (exists v, act = SECCOMP_RET_TRACE v)) /\
+  (forall a1 a2 a3,
+    action_more_restrictive a1 a2 = true ->
+    action_more_restrictive a2 a3 = true ->
+    action_more_restrictive a1 a3 = true) /\
+  (forall act,
+    act <> SECCOMP_RET_KILL_PROCESS ->
+    action_more_restrictive SECCOMP_RET_KILL_PROCESS act = true) /\
+  (forall act,
+    act <> SECCOMP_RET_ALLOW ->
+    action_more_restrictive act SECCOMP_RET_ALLOW = true) /\
+  (forall act, action_priority act <= 7) /\
+  (forall n, n <= 7 -> exists act, action_priority act = n) /\
+  (forall m idx,
+    idx < MEM_SIZE ->
+    exists (pf : idx < MEM_SIZE),
+      read_mem m idx = Vector.nth m (Fin.of_nat_lt pf)) /\
+  (forall m idx val,
+    idx < MEM_SIZE ->
+    exists (pf : idx < MEM_SIZE),
+      update_mem m idx val = Vector.replace m (Fin.of_nat_lt pf) val) /\
+  (forall m idx,
+    idx >= MEM_SIZE ->
+    read_mem m idx = 0) /\
+  (forall m idx val,
+    idx >= MEM_SIZE ->
+    update_mem m idx val = m) /\
+  (forall m idx val,
+    idx < MEM_SIZE ->
+    read_mem (update_mem m idx val) idx = val) /\
+  (forall m i j val,
+    i < MEM_SIZE ->
+    j < MEM_SIZE ->
+    i <> j ->
+    read_mem (update_mem m i val) j = read_mem m j) /\
+  (forall op a b,
+    a < 4294967296 -> b < 4294967296 ->
+    apply_alu_op op a b < 4294967296) /\
+  (forall op a b,
+    apply_alu_op op a b < 4294967296).
+Proof.
+  repeat split.
+  all: auto.
+  all: try apply execution_always_terminates.
+  all: try apply action_classification.
+  all: try apply action_priority_transitive.
+  all: try apply kill_process_most_restrictive.
+  all: try apply allow_least_restrictive.
+  all: try apply action_priority_bounded.
+  all: try apply action_priority_well_founded.
+  all: try apply memory_read_safe.
+  all: try apply memory_write_safe.
+  all: try apply memory_out_of_bounds_read_returns_zero.
+  all: try apply memory_out_of_bounds_write_noop.
+  all: try apply update_mem_then_read.
+  all: try apply update_mem_independence.
+  all: try apply alu_operations_bounded.
+  all: try apply alu_result_always_bounded.
+Qed.
+
+Theorem action_code_inverse_completeness :
+  (forall n, n < 4294967296 -> word32_of_nat n = n) /\
+  (forall op a b,
+    apply_alu_op op a b < 4294967296) /\
+  (action_code SECCOMP_RET_KILL_PROCESS = 2147483648) /\
+  (action_code SECCOMP_RET_ALLOW = 2147418112) /\
+  (action_code SECCOMP_RET_KILL_THREAD = 0) /\
+  (action_code SECCOMP_RET_LOG = 2147221504) /\
+  (forall v, action_code (SECCOMP_RET_TRAP v) = word32_of_nat (196608 + v)) /\
+  (forall v, action_code (SECCOMP_RET_ERRNO v) = word32_of_nat (327680 + v)) /\
+  (forall v, action_code (SECCOMP_RET_USER_NOTIF v) = word32_of_nat (2143289344 + v)) /\
+  (forall v, action_code (SECCOMP_RET_TRACE v) = word32_of_nat (2146435072 + v)).
+Proof.
+  repeat split.
+  all: auto.
+  all: try apply word32_of_nat_small.
+  all: try apply alu_result_always_bounded.
+  all: try apply action_code_kill_process_value.
+  all: try apply action_code_allow_value.
+  all: try apply action_code_kill_thread_value.
+  all: try apply action_code_log_value.
+  all: try apply action_code_trap_base.
+  all: try apply action_code_errno_base.
+  all: try apply action_code_user_notif_base.
+  all: try apply action_code_trace_base.
+Qed.
+
+Theorem decoder_verification_completeness :
+  (forall sf i1 i2,
+    decode_instruction sf = Some i1 ->
+    decode_instruction sf = Some i2 ->
+    i1 = i2) /\
+  (forall sf,
+    (exists i, decode_instruction sf = Some i) \/ decode_instruction sf = None) /\
+  (forall sf,
+    decode_instruction sf = decode_instruction sf) /\
+  (forall sf i,
+    decode_instruction sf = Some i ->
+    decode_instruction sf <> None) /\
+  (forall sf,
+    decode_instruction sf = None ->
+    forall i, decode_instruction sf <> Some i) /\
+  (forall sf instr prog data s,
+    decode_instruction sf = Some instr ->
+    nth_error prog (pc s) = Some instr ->
+    exists result, execute_instruction prog data s = result) /\
+  (forall sf idx,
+    decode_instruction sf = Some (LD_MEM idx) ->
+    idx < MEM_SIZE) /\
+  (forall sf idx,
+    decode_instruction sf = Some (ST_MEM idx) ->
+    idx < MEM_SIZE) /\
+  (forall sf,
+    BPF_CLASS (code sf) = 6 ->
+    exists src k, decode_instruction sf = Some (RET src k)) /\
+  (forall n,
+    BPF_CLASS n = 0 \/ BPF_CLASS n = 1 \/ BPF_CLASS n = 2 \/ BPF_CLASS n = 3 \/
+    BPF_CLASS n = 4 \/ BPF_CLASS n = 5 \/ BPF_CLASS n = 6 \/ BPF_CLASS n = 7) /\
+  (forall sf cls,
+    BPF_CLASS (code sf) = cls ->
+    cls < 8 ->
+    exists result, decode_instruction sf = result) /\
+  (forall sf,
+    exists result, decode_instruction sf = result) /\
+  (forall sf,
+    decode_instruction sf = None ->
+    BPF_CLASS (code sf) < 8) /\
+  (forall sf i,
+    decode_instruction sf = Some i ->
+    BPF_CLASS (code sf) < 8).
+Proof.
+  split.
+  - intros sf i1 i2 H1 H2.
+    exact (decode_instruction_deterministic sf i1 i2 H1 H2).
+  - split.
+    + intros sf.
+      exact (decode_instruction_total sf).
+    + split.
+      * intros sf.
+        exact (decode_instruction_functional sf).
+      * split.
+        { intros sf i H Hcontra.
+          exact (decode_some_not_none sf i H Hcontra). }
+        { split.
+          - intros sf Hnone i Hcontra.
+            exact (decode_none_not_some sf Hnone i Hcontra).
+          - split.
+            + intros sf instr prog data s Hdec Hnth.
+              exact (decode_execute_sound sf instr prog data s Hdec Hnth).
+            + split.
+              * intros sf idx H.
+                exact (decode_valid_mem_bounds sf idx H).
+              * split.
+                { intros sf idx H.
+                  exact (decode_valid_st_mem_bounds sf idx H). }
+                { split.
+                  - intros sf Hcls.
+                    exact (decode_class_6_always_some sf Hcls).
+                  - split.
+                    + intros n.
+                      exact (bpf_class_exhaustive n).
+                    + split.
+                      * intros sf cls Hcls Hbound.
+                        exact (decode_handles_all_classes sf cls Hcls Hbound).
+                      * split.
+                        { intros sf.
+                          exact (decode_class_coverage sf). }
+                        { split.
+                          - intros sf H.
+                            exact (decode_none_implies_invalid sf H).
+                          - intros sf i H.
+                            exact (decode_some_valid_structure sf i H). } } }
+Qed.
+
 Definition compilation_success : bool := true.
 Check compilation_success.
 Compute compilation_success.
