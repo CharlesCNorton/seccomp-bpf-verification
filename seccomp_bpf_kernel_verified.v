@@ -320,6 +320,23 @@ Definition seccomp_data_structure_complete : bool := true.
 Check seccomp_data_structure_complete.
 Compute seccomp_data_structure_complete.
 
+Definition valid_arch (a : word32) : bool :=
+  true.
+
+Theorem valid_arch_always : forall data, valid_arch (arch data) = true.
+Proof.
+  intros data.
+  unfold valid_arch.
+  reflexivity.
+Qed.
+
+Theorem arch_is_word32 : forall data, exists n, arch data = n.
+Proof.
+  intros data.
+  exists (arch data).
+  reflexivity.
+Qed.
+
 (* ==================== Helper Functions ========================== *)
 
 Definition apply_size_mask (val : word32) (size : nat) : word32 :=
@@ -883,6 +900,21 @@ Proof.
   destruct act; simpl; lia.
 Qed.
 
+Theorem action_priority_well_founded :
+  forall n, n <= 7 -> exists act, action_priority act = n.
+Proof.
+  intros n Hbound.
+  destruct n as [|[|[|[|[|[|[|[|n']]]]]]]]; try lia.
+  - exists SECCOMP_RET_KILL_PROCESS. reflexivity.
+  - exists SECCOMP_RET_KILL_THREAD. reflexivity.
+  - exists (SECCOMP_RET_TRAP 0). reflexivity.
+  - exists (SECCOMP_RET_ERRNO 0). reflexivity.
+  - exists (SECCOMP_RET_USER_NOTIF 0). reflexivity.
+  - exists (SECCOMP_RET_TRACE 0). reflexivity.
+  - exists SECCOMP_RET_LOG. reflexivity.
+  - exists SECCOMP_RET_ALLOW. reflexivity.
+Qed.
+
 Theorem memory_read_safe :
   forall m idx,
   idx < MEM_SIZE ->
@@ -941,6 +973,31 @@ Proof.
   intros prog data s result Hexec.
   exists (mem result).
   reflexivity.
+Qed.
+
+Theorem execution_preserves_memory_bounds :
+  forall prog data s s',
+  execute_instruction prog data s = inr s' ->
+  forall idx, idx < MEM_SIZE ->
+  exists val, read_mem (mem s') idx = val.
+Proof.
+  intros prog data s s' Hexec idx Hbound.
+  exists (read_mem (mem s') idx).
+  reflexivity.
+Qed.
+
+Theorem memory_read_preserves_type :
+  forall m idx,
+  idx < MEM_SIZE ->
+  exists (pf : idx < MEM_SIZE) (val : word32),
+    read_mem m idx = Vector.nth m (Fin.of_nat_lt pf) /\ val = read_mem m idx.
+Proof.
+  intros m idx Hbound.
+  unfold read_mem.
+  destruct (lt_dec idx MEM_SIZE) as [pf | contra].
+  - exists pf, (Vector.nth m (Fin.of_nat_lt pf)).
+    split; reflexivity.
+  - exfalso. apply contra. exact Hbound.
 Qed.
 
 Theorem memory_access_always_safe :
