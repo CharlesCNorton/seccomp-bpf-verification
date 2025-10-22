@@ -83,9 +83,14 @@ Definition BPF_W : nat := 4.
 Definition BPF_H : nat := 2.
 Definition BPF_B : nat := 1.
 
-Definition kernel_constants_complete : bool := true.
-Check kernel_constants_complete.
-Compute kernel_constants_complete.
+Theorem kernel_constants_complete :
+  BPF_MAXINSNS = 4096 /\
+  MEM_SIZE = 16 /\
+  SECCOMP_DATA_SIZE = 64 /\
+  BPF_W = 4 /\ BPF_H = 2 /\ BPF_B = 1.
+Proof.
+  repeat split; reflexivity.
+Qed.
 
 (* ========================= BPF State ============================= *)
 
