@@ -169,9 +169,13 @@ Definition action_only (code : word32) : word32 :=
 Definition action_less_permissive (code1 code2 : word32) : bool :=
   action_only code1 <? action_only code2.
 
-Definition seccomp_action_codes_complete : bool := true.
-Check seccomp_action_codes_complete.
-Compute seccomp_action_codes_complete.
+Theorem seccomp_action_codes_complete :
+  forall act : SeccompAction,
+  action_priority act <= 7.
+Proof.
+  intros act.
+  destruct act; simpl; lia.
+Qed.
 
 (* ==================== BPF Instruction Set (Classic BPF) =========== *)
 
