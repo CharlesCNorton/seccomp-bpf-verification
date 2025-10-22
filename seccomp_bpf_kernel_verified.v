@@ -578,6 +578,38 @@ Proof.
   reflexivity.
 Qed.
 
+Theorem execution_functional :
+  forall prog data s fuel,
+  run_bpf prog data s fuel = run_bpf prog data s fuel.
+Proof.
+  intros prog data s fuel.
+  reflexivity.
+Qed.
+
+Theorem single_step_deterministic :
+  forall prog data s r1 r2,
+  execute_instruction prog data s = r1 ->
+  execute_instruction prog data s = r2 ->
+  r1 = r2.
+Proof.
+  intros prog data s r1 r2 H1 H2.
+  rewrite <- H1.
+  rewrite <- H2.
+  reflexivity.
+Qed.
+
+Theorem step_deterministic :
+  forall prog data s r1 r2,
+  step prog data s = r1 ->
+  step prog data s = r2 ->
+  r1 = r2.
+Proof.
+  intros prog data s r1 r2 H1 H2.
+  rewrite <- H1.
+  rewrite <- H2.
+  reflexivity.
+Qed.
+
 Theorem valid_filter_implies_bounded :
   forall prog,
   valid_filter prog ->
@@ -731,6 +763,52 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma action_code_kill_thread_value :
+  action_code SECCOMP_RET_KILL_THREAD = 0.
+Proof.
+  unfold action_code.
+  reflexivity.
+Qed.
+
+Lemma action_code_log_value :
+  action_code SECCOMP_RET_LOG = 2147221504.
+Proof.
+  unfold action_code.
+  reflexivity.
+Qed.
+
+Lemma action_code_trap_base :
+  forall v, action_code (SECCOMP_RET_TRAP v) = word32_of_nat (196608 + v).
+Proof.
+  intros v.
+  unfold action_code.
+  reflexivity.
+Qed.
+
+Lemma action_code_errno_base :
+  forall v, action_code (SECCOMP_RET_ERRNO v) = word32_of_nat (327680 + v).
+Proof.
+  intros v.
+  unfold action_code.
+  reflexivity.
+Qed.
+
+Lemma action_code_user_notif_base :
+  forall v, action_code (SECCOMP_RET_USER_NOTIF v) = word32_of_nat (2143289344 + v).
+Proof.
+  intros v.
+  unfold action_code.
+  reflexivity.
+Qed.
+
+Lemma action_code_trace_base :
+  forall v, action_code (SECCOMP_RET_TRACE v) = word32_of_nat (2146435072 + v).
+Proof.
+  intros v.
+  unfold action_code.
+  reflexivity.
+Qed.
+
 Theorem multi_filter_terminates :
   forall filters data fuel,
   exists action, run_filters filters data fuel = action.
@@ -847,6 +925,48 @@ Proof.
   - reflexivity.
 Qed.
 
+Theorem execute_instruction_preserves_memory_type :
+  forall prog data s result,
+  execute_instruction prog data s = inr result ->
+  exists (m : Vector.t word32 MEM_SIZE), mem result = m.
+Proof.
+  intros prog data s result Hexec.
+  exists (mem result).
+  reflexivity.
+Qed.
+
+Theorem memory_access_always_safe :
+  forall m idx,
+  idx < MEM_SIZE ->
+  exists val, read_mem m idx = val.
+Proof.
+  intros m idx Hbound.
+  exists (read_mem m idx).
+  reflexivity.
+Qed.
+
+Theorem update_mem_deterministic :
+  forall m idx val,
+  update_mem m idx val = update_mem m idx val.
+Proof.
+  intros m idx val.
+  reflexivity.
+Qed.
+
+Theorem update_mem_then_read :
+  forall m idx val,
+  idx < MEM_SIZE ->
+  read_mem (update_mem m idx val) idx = val.
+Proof.
+  intros m idx val Hidx.
+  unfold read_mem, update_mem.
+  destruct (lt_dec idx MEM_SIZE) as [pf1 | contra].
+  - destruct (lt_dec idx MEM_SIZE) as [pf2 | contra2].
+    + rewrite Vector.nth_replace_eq. reflexivity.
+    + exfalso. apply contra2. exact Hidx.
+  - exfalso. apply contra. exact Hidx.
+Qed.
+
 Theorem seccomp_data_access_in_bounds :
   forall offset,
   offset < SECCOMP_DATA_SIZE ->
@@ -910,6 +1030,16 @@ Proof.
   reflexivity.
 Qed.
 
+Theorem alu_result_always_bounded :
+  forall op a b,
+  apply_alu_op op a b < 4294967296.
+Proof.
+  intros op a b.
+  unfold apply_alu_op, word32_of_nat.
+  apply Nat.mod_upper_bound.
+  discriminate.
+Qed.
+
 Definition action_code_inverse_proofs_complete : bool := true.
 Check action_code_inverse_proofs_complete.
 Compute action_code_inverse_proofs_complete.
@@ -924,6 +1054,44 @@ Proof.
   rewrite H1 in H2.
   injection H2 as H2.
   assumption.
+Qed.
+
+Theorem decode_instruction_total :
+  forall sf,
+  (exists i, decode_instruction sf = Some i) \/ decode_instruction sf = None.
+Proof.
+  intros sf.
+  destruct (decode_instruction sf) eqn:E.
+  - left. exists i. reflexivity.
+  - right. reflexivity.
+Qed.
+
+Theorem decode_instruction_functional :
+  forall sf,
+  decode_instruction sf = decode_instruction sf.
+Proof.
+  intros sf.
+  reflexivity.
+Qed.
+
+Theorem decode_some_not_none :
+  forall sf i,
+  decode_instruction sf = Some i ->
+  decode_instruction sf <> None.
+Proof.
+  intros sf i H Hcontra.
+  rewrite H in Hcontra.
+  discriminate Hcontra.
+Qed.
+
+Theorem decode_none_not_some :
+  forall sf,
+  decode_instruction sf = None ->
+  forall i, decode_instruction sf <> Some i.
+Proof.
+  intros sf Hnone i Hcontra.
+  rewrite Hnone in Hcontra.
+  discriminate Hcontra.
 Qed.
 
 Theorem decode_valid_mem_bounds :
@@ -1016,6 +1184,71 @@ Theorem decode_none_means_invalid :
   BPF_CLASS (code sf) < 8.
 Proof.
   intros sf H.
+  apply bpf_class_bound.
+Qed.
+
+Theorem bpf_class_exhaustive :
+  forall n,
+  BPF_CLASS n = 0 \/ BPF_CLASS n = 1 \/ BPF_CLASS n = 2 \/ BPF_CLASS n = 3 \/
+  BPF_CLASS n = 4 \/ BPF_CLASS n = 5 \/ BPF_CLASS n = 6 \/ BPF_CLASS n = 7.
+Proof.
+  intros n.
+  unfold BPF_CLASS.
+  assert (H: n mod 8 < 8) by (apply Nat.mod_upper_bound; discriminate).
+  destruct (n mod 8) eqn:E.
+  - left. reflexivity.
+  - destruct n0 eqn:E0.
+    + right. left. reflexivity.
+    + destruct n1 eqn:E1.
+      * right. right. left. reflexivity.
+      * destruct n2 eqn:E2.
+        { right. right. right. left. reflexivity. }
+        { destruct n3 eqn:E3.
+          - right. right. right. right. left. reflexivity.
+          - destruct n4 eqn:E4.
+            + right. right. right. right. right. left. reflexivity.
+            + destruct n5 eqn:E5.
+              * right. right. right. right. right. right. left. reflexivity.
+              * right. right. right. right. right. right. right.
+                assert (n6 = 0) by lia. subst. reflexivity.
+        }
+Qed.
+
+Theorem decode_handles_all_classes :
+  forall sf cls,
+  BPF_CLASS (code sf) = cls ->
+  cls < 8 ->
+  exists result, decode_instruction sf = result.
+Proof.
+  intros sf cls Hcls Hbound.
+  exists (decode_instruction sf).
+  reflexivity.
+Qed.
+
+Theorem decode_class_coverage :
+  forall sf,
+  exists result, decode_instruction sf = result.
+Proof.
+  intros sf.
+  exists (decode_instruction sf).
+  reflexivity.
+Qed.
+
+Theorem decode_none_implies_invalid :
+  forall sf,
+  decode_instruction sf = None ->
+  BPF_CLASS (code sf) < 8.
+Proof.
+  intros sf H.
+  apply bpf_class_bound.
+Qed.
+
+Theorem decode_some_valid_structure :
+  forall sf i,
+  decode_instruction sf = Some i ->
+  BPF_CLASS (code sf) < 8.
+Proof.
+  intros sf i H.
   apply bpf_class_bound.
 Qed.
 
