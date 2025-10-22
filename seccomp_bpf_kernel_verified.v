@@ -967,6 +967,39 @@ Proof.
   - exfalso. apply contra. exact Hidx.
 Qed.
 
+Lemma fin_of_nat_lt_injective :
+  forall n (i j : nat) (Hi : i < n) (Hj : j < n),
+  Fin.of_nat_lt Hi = Fin.of_nat_lt Hj -> i = j.
+Proof.
+  intros n i j Hi Hj Heq.
+  assert (Heq_to_nat: proj1_sig (Fin.to_nat (Fin.of_nat_lt Hi)) =
+                      proj1_sig (Fin.to_nat (Fin.of_nat_lt Hj))).
+  { rewrite Heq. reflexivity. }
+  rewrite !Fin.to_nat_of_nat in Heq_to_nat.
+  simpl in Heq_to_nat.
+  exact Heq_to_nat.
+Qed.
+
+Theorem update_mem_independence :
+  forall m i j val,
+  i < MEM_SIZE ->
+  j < MEM_SIZE ->
+  i <> j ->
+  read_mem (update_mem m i val) j = read_mem m j.
+Proof.
+  intros m i j val Hi Hj Hneq.
+  unfold read_mem, update_mem.
+  destruct (lt_dec i MEM_SIZE) as [pfi | contradi].
+  - destruct (lt_dec j MEM_SIZE) as [pfj | contradj].
+    + apply Vector.nth_replace_neq.
+      intro Heq.
+      apply Hneq.
+      symmetry.
+      exact (fin_of_nat_lt_injective MEM_SIZE j i pfj pfi Heq).
+    + exfalso. apply contradj. exact Hj.
+  - exfalso. apply contradi. exact Hi.
+Qed.
+
 Theorem seccomp_data_access_in_bounds :
   forall offset,
   offset < SECCOMP_DATA_SIZE ->
