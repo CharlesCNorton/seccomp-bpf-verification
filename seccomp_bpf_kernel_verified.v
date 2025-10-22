@@ -101,9 +101,15 @@ Record BPFState := mkState {
   pc     : nat
 }.
 
-Definition bpf_state_complete : bool := true.
-Check bpf_state_complete.
-Compute bpf_state_complete.
+Theorem bpf_state_complete :
+  forall s : BPFState,
+  exists a x m p, s = mkState a x m p.
+Proof.
+  intros s.
+  destruct s as [a x m p].
+  exists a, x, m, p.
+  reflexivity.
+Qed.
 
 (* ==================== seccomp Action Codes (Kernel-Accurate) ===== *)
 
