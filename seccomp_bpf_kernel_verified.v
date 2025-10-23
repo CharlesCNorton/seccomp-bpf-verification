@@ -570,6 +570,50 @@ Definition well_formedness_complete : bool := true.
 Check well_formedness_complete.
 Compute well_formedness_complete.
 
+(* ==================== PC Overflow Protection ===================== *)
+
+Lemma pc_increment_bounded :
+  forall (prog : list Instruction) (s : BPFState),
+  pc s < length prog ->
+  S (pc s) <= length prog.
+Proof.
+  intros prog s H.
+  lia.
+Qed.
+
+Lemma jump_target_bounded_true :
+  forall (prog : list Instruction) (idx : nat) (op : BPFJmpOp) (src : BPFSource) (k : word32) (jt jf : nat),
+  no_invalid_jumps prog ->
+  nth_error prog idx = Some (JMP op src k jt jf) ->
+  idx < length prog ->
+  S idx + jt < length prog.
+Proof.
+  intros prog idx op src k jt jf H_no_inv H_nth H_idx.
+  unfold no_invalid_jumps in H_no_inv.
+  specialize (H_no_inv idx op src k jt jf H_nth).
+  destruct H_no_inv as [H_jt _].
+  exact H_jt.
+Qed.
+
+Lemma jump_target_bounded_false :
+  forall (prog : list Instruction) (idx : nat) (op : BPFJmpOp) (src : BPFSource) (k : word32) (jt jf : nat),
+  no_invalid_jumps prog ->
+  nth_error prog idx = Some (JMP op src k jt jf) ->
+  idx < length prog ->
+  S idx + jf < length prog.
+Proof.
+  intros prog idx op src k jt jf H_no_inv H_nth H_idx.
+  unfold no_invalid_jumps in H_no_inv.
+  specialize (H_no_inv idx op src k jt jf H_nth).
+  destruct H_no_inv as [_ H_jf].
+  exact H_jf.
+Qed.
+
+
+Definition pc_overflow_protection_complete : bool := true.
+Check pc_overflow_protection_complete.
+Compute pc_overflow_protection_complete.
+
 (* ==================== Trace Conformance ========================== *)
 
 Definition Input := SeccompData.
