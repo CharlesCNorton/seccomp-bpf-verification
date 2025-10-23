@@ -626,6 +626,14 @@ Proof.
   reflexivity.
 Qed.
 
+Corollary execution_zero_fuel_kills :
+  forall prog data s,
+  run_bpf prog data s 0 = SECCOMP_RET_KILL_THREAD.
+Proof.
+  intros prog data s.
+  reflexivity.
+Qed.
+
 Theorem execution_functional :
   forall prog data s fuel,
   run_bpf prog data s fuel = run_bpf prog data s fuel.
@@ -880,6 +888,27 @@ Proof.
   lia.
 Qed.
 
+Corollary action_priority_irreflexive :
+  forall act,
+  action_more_restrictive act act = false.
+Proof.
+  intros act.
+  unfold action_more_restrictive.
+  apply Nat.ltb_irrefl.
+Qed.
+
+Corollary action_priority_asymmetric :
+  forall a1 a2,
+  action_more_restrictive a1 a2 = true ->
+  action_more_restrictive a2 a1 = false.
+Proof.
+  intros a1 a2 H.
+  unfold action_more_restrictive in *.
+  apply Nat.ltb_lt in H.
+  apply Nat.ltb_ge.
+  lia.
+Qed.
+
 Theorem kill_process_most_restrictive :
   forall act,
   act <> SECCOMP_RET_KILL_PROCESS ->
@@ -1053,6 +1082,15 @@ Proof.
     + rewrite Vector.nth_replace_eq. reflexivity.
     + exfalso. apply contra2. exact Hidx.
   - exfalso. apply contra. exact Hidx.
+Qed.
+
+Corollary update_mem_twice_same_val :
+  forall m idx val1 val2,
+  idx < MEM_SIZE ->
+  read_mem (update_mem (update_mem m idx val1) idx val2) idx = val2.
+Proof.
+  intros m idx val1 val2 H.
+  rewrite update_mem_then_read; auto.
 Qed.
 
 Lemma fin_of_nat_lt_injective :
