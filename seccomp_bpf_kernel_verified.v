@@ -1855,6 +1855,22 @@ Proof.
                             exact (decode_some_valid_structure sf i H). } } }
 Qed.
 
+Theorem alu_all_ops_bounded :
+  forall op a b,
+  apply_alu_op op a b < 4294967296.
+Proof.
+  intros op a b.
+  unfold apply_alu_op, word32_of_nat.
+  destruct op; apply Nat.mod_upper_bound; discriminate.
+Qed.
+
+Theorem alu_overflow_safety_complete :
+  forall op a b,
+  apply_alu_op op a b < 4294967296.
+Proof.
+  apply alu_all_ops_bounded.
+Qed.
+
 Definition compilation_success : bool := true.
 Check compilation_success.
 Compute compilation_success.
